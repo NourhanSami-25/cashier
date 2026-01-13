@@ -1,31 +1,72 @@
+// Category Model
+export interface Category {
+  id: string;
+  name: string;
+  icon?: string;
+}
+
+// Product Model
 export interface Product {
   id: string;
   name: string;
   price: number;
-  category: string;
+  categoryId: string;
   image?: string;
 }
 
+// Cart Item Model
 export interface CartItem {
-  product: Product;
+  id: string;
+  productId: string;
+  productName: string;
+  unitPrice: number;
   quantity: number;
 }
 
+// Invoice Item Model
+export interface InvoiceItem {
+  productId: string;
+  productName: string;
+  unitPrice: number;
+  quantity: number;
+  itemTotal: number;
+}
+
+// Payment Method Type
+export type PaymentMethod = 'cash' | 'card';
+
+// Invoice Model
 export interface Invoice {
   id: string;
-  items: CartItem[];
+  invoiceNumber: string;
+  dateTime: Date;
+  items: InvoiceItem[];
   subtotal: number;
-  serviceCharge: number;
+  serviceFee: number;
   tax: number;
   total: number;
   paymentMethod: PaymentMethod;
-  createdAt: Date;
+  isPaid: boolean;
 }
 
-export type PaymentMethod = 'cash' | 'card';
+// Daily Report Model
+export interface DailyReport {
+  date: Date;
+  totalSales: number;
+  invoiceCount: number;
+  totalRevenue: number;
+  invoices: Invoice[];
+}
 
-export interface Category {
-  id: string;
-  name: string;
-  icon: string;
+// Validation Result
+export interface ValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+// POS Configuration
+export interface POSConfig {
+  serviceFeePercentage: number;
+  taxPercentage: number;
+  currency: string;
 }

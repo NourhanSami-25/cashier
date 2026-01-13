@@ -1,15 +1,17 @@
 import { Product } from '@/types/pos';
 import { Plus } from 'lucide-react';
+import { invoiceService } from '@/services/invoiceService';
+import { POS_CONFIG } from '@/config/pos.config';
 
 interface ProductCardProps {
   product: Product;
-  onAdd: (product: Product) => void;
+  onClick: () => void;
 }
 
-export function ProductCard({ product, onAdd }: ProductCardProps) {
+export function ProductCard({ product, onClick }: ProductCardProps) {
   return (
     <button
-      onClick={() => onAdd(product)}
+      onClick={onClick}
       className="group bg-card rounded-2xl p-4 border border-border shadow-soft hover:shadow-lg hover:border-primary/30 transition-all duration-200 text-right animate-fade-in active:scale-95"
     >
       <div className="flex items-start justify-between mb-3">
@@ -24,9 +26,9 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
       </div>
       <div className="flex items-center justify-end">
         <span className="text-2xl font-bold text-primary">
-          {product.price}
+          {invoiceService.formatCurrency(product.price)}
         </span>
-        <span className="text-sm text-muted-foreground mr-1">ر.س</span>
+        <span className="text-sm text-muted-foreground mr-1">{POS_CONFIG.currency}</span>
       </div>
     </button>
   );

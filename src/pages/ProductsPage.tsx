@@ -1,19 +1,75 @@
-import { Package, Plus, Pencil, Trash2, Search } from 'lucide-react';
-import { useState } from 'react';
-import { products, categories } from '@/data/products';
+import { useState, useEffect } from 'react';
+import { ProductForm } from '@/components/products/ProductForm';
+import { ProductTable } from '@/components/products/ProductTable';
+import { CategoryManager } from '@/components/products/CategoryManager';
+import { productService } from '@/services/productService';
+import { Product, Category } from '@/types/pos';
+import { toast } from 'sonner';
+import { Plus, Package } from 'lucide-react';
 
 export default function ProductsPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.includes(searchQuery);
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const getCategoryName = (categoryId: string) => {
-    return categories.find((c) => c.id === categoryId)?.name || categoryId;
+  const loadData = () => {
+    productService.initializeDefaultData();
+    setProducts(productService.getAllProducts());
+    setCategories(productService.getAllCategories());
+  };
+
+  const handleSaveProduct = (productData: Omit<Product, 'id'>) => {
+    try {
+      if (editingProduct) {
+        productService.updateProduct(editingProduct.id, productData);
+        toast.success('تم تحديث المنتج بنجاح');
+      } else {
+        productService.addProduct(productData);
+        toast.success('تم إضافة المنتج بنجاح');
+      }
+      loadData();
+      setEditingProduct(null);
+      setShowForm(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'حدث خطأ');
+    }
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setShowForm(true);
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    productService.deleteProduct(productId);
+    toast.success('تم حذف المنتج');
+    loadData();
+  };
+
+  const handleAddCategory = (name: string) => {
+    try {
+      productService.addCategory(name);
+      toast.success('تم إضافة التصنيف');
+      loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'حدث خطأ');
+    }
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    productService.deleteCategory(categoryId);
+    toast.success('تم حذف التصنيف');
+    loadData();
+  };
+
+  const handleCancelForm = () => {
+    setEditingProduct(null);
+    setShowForm(false);
   };
 
   return (
@@ -21,82 +77,47 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center shadow-soft">
-            <Package className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">إدارة المنتجات</h1>
-            <p className="text-muted-foreground">إضافة وتعديل المنتجات والأسعار</p>
-          </div>
+          <Package className="w-8 h-8 text-primary" />
+          <h1 className="text-2xl font-bold text-foreground">إدارة المنتجات</h1>
         </div>
-        <button className="flex items-center gap-2 px-5 py-3 gradient-accent text-accent-foreground rounded-xl font-medium shadow-soft hover:shadow-glow transition-all duration-200">
-          <Plus className="w-5 h-5" />
-          <span>إضافة منتج</span>
-        </button>
+        {!showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="px-4 py-2 gradient-primary text-primary-foreground rounded-lg font-medium flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            <span>إضافة منتج</span>
+          </button>
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="البحث عن منتج..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pr-12 pl-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Products Section */}
+        <div className="lg:col-span-2 space-y-4">
+          {showForm && (
+            <ProductForm
+              product={editingProduct}
+              categories={categories}
+              onSave={handleSaveProduct}
+              onCancel={handleCancelForm}
+            />
+          )}
+          <ProductTable
+            products={products}
+            categories={categories}
+            onEdit={handleEditProduct}
+            onDelete={handleDeleteProduct}
           />
         </div>
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all min-w-[150px]"
-        >
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </div>
 
-      {/* Products Table */}
-      <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-secondary/50">
-            <tr>
-              <th className="text-right py-4 px-6 font-semibold text-foreground">#</th>
-              <th className="text-right py-4 px-6 font-semibold text-foreground">المنتج</th>
-              <th className="text-right py-4 px-6 font-semibold text-foreground">التصنيف</th>
-              <th className="text-right py-4 px-6 font-semibold text-foreground">السعر</th>
-              <th className="text-right py-4 px-6 font-semibold text-foreground">الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.map((product, index) => (
-              <tr key={product.id} className="border-t border-border hover:bg-secondary/30 transition-colors">
-                <td className="py-4 px-6 text-muted-foreground">{index + 1}</td>
-                <td className="py-4 px-6 font-medium text-foreground">{product.name}</td>
-                <td className="py-4 px-6">
-                  <span className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm">
-                    {getCategoryName(product.category)}
-                  </span>
-                </td>
-                <td className="py-4 px-6 font-bold text-primary">{product.price} ر.س</td>
-                <td className="py-4 px-6">
-                  <div className="flex items-center gap-2">
-                    <button className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Categories Section */}
+        <div>
+          <CategoryManager
+            categories={categories}
+            onAdd={handleAddCategory}
+            onDelete={handleDeleteCategory}
+          />
+        </div>
       </div>
     </div>
   );

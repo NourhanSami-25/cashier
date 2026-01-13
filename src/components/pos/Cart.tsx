@@ -1,35 +1,54 @@
+import React from 'react';
 import { CartItem as CartItemType, PaymentMethod } from '@/types/pos';
 import { CartItem } from './CartItem';
 import { ShoppingCart, CreditCard, Banknote, RotateCcw, Printer, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { invoiceService } from '@/services/invoiceService';
+import { POS_CONFIG } from '@/config/pos.config';
 
 interface CartProps {
   items: CartItemType[];
-  paymentMethod: PaymentMethod;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemoveItem: (productId: string) => void;
-  onPaymentMethodChange: (method: PaymentMethod) => void;
-  onNewInvoice: () => void;
-  onComplete: () => void;
+  subtotal: number;
+  serviceFee: number;
+  tax: number;
+  total: number;
+  onQuantityChange: (itemId: string, delta: number) => void;
+  onRemoveItem: (itemId: string) => void;
+  onClearCart: () => void;
+  onCompleteSale: (paymentMethod: PaymentMethod) => void;
+  onPrint?: () => void;
 }
-
-const SERVICE_RATE = 0.10; // 10%
-const TAX_RATE = 0.15; // 15%
 
 export function Cart({
   items,
-  paymentMethod,
-  onUpdateQuantity,
+  subtotal,
+  serviceFee,
+  tax,
+  total,
+  onQuantityChange,
   onRemoveItem,
-  onPaymentMethodChange,
-  onNewInvoice,
-  onComplete,
+  onClearCart,
+  onCompleteSale,
+  onPrint,
 }: CartProps) {
-  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const serviceCharge = subtotal * SERVICE_RATE;
-  const taxableAmount = subtotal + serviceCharge;
-  const tax = taxableAmount * TAX_RATE;
-  const total = taxableAmount + tax;
+  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('cash');
+
+  const handleCompleteSale = () => {
+    if (items.length === 0) {
+      return;
+    }
+    onCompleteSale(paymentMethod);
+  };
+
+  const handleNewInvoice = () => {
+    if (items.length > 0) {
+      if (window.confirm('هل تريد مسح الفاتورة الحالية؟')) {
+        onClearCart();
+      }
+    } else {
+      onClearCart();
+    }
+  };
 
   return (
     <div className="bg-card rounded-2xl border border-border shadow-soft h-full flex flex-col">
@@ -57,10 +76,10 @@ export function Cart({
         ) : (
           items.map((item) => (
             <CartItem
-              key={item.product.id}
+              key={item.id}
               item={item}
-              onUpdateQuantity={onUpdateQuantity}
-              onRemove={onRemoveItem}
+              onQuantityChange={(delta) => onQuantityChange(item.id, delta)}
+              onRemove={() => onRemoveItem(item.id)}
             />
           ))
         )}
@@ -73,20 +92,20 @@ export function Cart({
           <div className="space-y-2 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>المجموع الفرعي</span>
-              <span>{subtotal.toFixed(2)} ر.س</span>
+              <span>{invoiceService.formatCurrency(subtotal)} {POS_CONFIG.currency}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>رسوم الخدمة (10%)</span>
-              <span>{serviceCharge.toFixed(2)} ر.س</span>
+              <span>رسوم الخدمة ({(POS_CONFIG.serviceFeePercentage * 100).toFixed(0)}%)</span>
+              <span>{invoiceService.formatCurrency(serviceFee)} {POS_CONFIG.currency}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>الضريبة (15%)</span>
-              <span>{tax.toFixed(2)} ر.س</span>
+              <span>الضريبة ({(POS_CONFIG.taxPercentage * 100).toFixed(0)}%)</span>
+              <span>{invoiceService.formatCurrency(tax)} {POS_CONFIG.currency}</span>
             </div>
             <div className="h-px bg-border my-2" />
             <div className="flex justify-between text-lg font-bold text-foreground">
               <span>الإجمالي</span>
-              <span className="text-primary">{total.toFixed(2)} ر.س</span>
+              <span className="text-primary">{invoiceService.formatCurrency(total)} {POS_CONFIG.currency}</span>
             </div>
           </div>
 
@@ -95,7 +114,7 @@ export function Cart({
             <p className="text-sm font-medium text-muted-foreground">طريقة الدفع</p>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => onPaymentMethodChange('cash')}
+                onClick={() => setPaymentMethod('cash')}
                 className={cn(
                   "flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all duration-200",
                   paymentMethod === 'cash'
@@ -107,7 +126,7 @@ export function Cart({
                 <span>نقدي</span>
               </button>
               <button
-                onClick={() => onPaymentMethodChange('card')}
+                onClick={() => setPaymentMethod('card')}
                 className={cn(
                   "flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all duration-200",
                   paymentMethod === 'card'
@@ -124,7 +143,7 @@ export function Cart({
           {/* Actions */}
           <div className="space-y-2">
             <button
-              onClick={onComplete}
+              onClick={handleCompleteSale}
               className="w-full py-4 gradient-accent text-accent-foreground rounded-xl font-bold text-lg shadow-soft hover:shadow-glow transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98]"
             >
               <CheckCircle className="w-6 h-6" />
@@ -132,13 +151,14 @@ export function Cart({
             </button>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={onNewInvoice}
+                onClick={handleNewInvoice}
                 className="py-3 bg-secondary text-secondary-foreground rounded-xl font-medium hover:bg-muted transition-colors flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>فاتورة جديدة</span>
               </button>
               <button
+                onClick={onPrint}
                 className="py-3 bg-secondary text-secondary-foreground rounded-xl font-medium hover:bg-muted transition-colors flex items-center justify-center gap-2"
               >
                 <Printer className="w-4 h-4" />

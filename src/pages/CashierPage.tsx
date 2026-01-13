@@ -1,70 +1,76 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { CategoryTabs } from '@/components/pos/CategoryTabs';
 import { ProductGrid } from '@/components/pos/ProductGrid';
 import { Cart } from '@/components/pos/Cart';
-import { categories, products } from '@/data/products';
-import { CartItem, Product, PaymentMethod } from '@/types/pos';
+import { CartProvider, useCart } from '@/context/CartContext';
+import { productService } from '@/services/productService';
+import { Product, Category } from '@/types/pos';
 import { toast } from 'sonner';
 
-export default function CashierPage() {
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+function CashierContent() {
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  
+  const {
+    items,
+    subtotal,
+    serviceFee,
+    tax,
+    total,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    completeSale,
+  } = useCart();
+
+  useEffect(() => {
+    // Initialize default data and load
+    productService.initializeDefaultData();
+    setProducts(productService.getAllProducts());
+    setCategories(productService.getAllCategories());
+  }, []);
 
   const filteredProducts = useMemo(() => {
-    if (activeCategory === 'all') return products;
-    return products.filter((p) => p.category === activeCategory);
-  }, [activeCategory]);
+    if (activeCategory === null) return products;
+    return productService.getProductsByCategory(activeCategory);
+  }, [activeCategory, products]);
 
-  const addToCart = (product: Product) => {
-    setCartItems((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prev, { product, quantity: 1 }];
-    });
+  const handleProductClick = (product: Product) => {
+    addItem(product);
     toast.success(`تمت إضافة ${product.name}`);
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeItem(productId);
-      return;
-    }
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
-    );
+  const handleQuantityChange = (itemId: string, delta: number) => {
+    updateQuantity(itemId, delta);
   };
 
-  const removeItem = (productId: string) => {
-    setCartItems((prev) => prev.filter((item) => item.product.id !== productId));
+  const handleRemoveItem = (itemId: string) => {
+    removeItem(itemId);
     toast.info('تم حذف الصنف');
   };
 
-  const handleNewInvoice = () => {
-    setCartItems([]);
-    setPaymentMethod('cash');
+  const handleClearCart = () => {
+    clearCart();
     toast.info('تم إنشاء فاتورة جديدة');
   };
 
-  const handleComplete = () => {
-    if (cartItems.length === 0) {
-      toast.error('الفاتورة فارغة');
+  const handleCompleteSale = (paymentMethod: 'cash' | 'card') => {
+    if (items.length === 0) {
+      toast.error('لا يمكن إتمام البيع بدون منتجات');
       return;
     }
     
-    const total = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-    const totalWithCharges = total * 1.10 * 1.15;
-    
-    toast.success(`تم إتمام البيع بنجاح - ${totalWithCharges.toFixed(2)} ر.س`);
-    setCartItems([]);
+    const invoice = completeSale(paymentMethod);
+    if (invoice) {
+      toast.success(`تم إتمام البيع بنجاح - ${invoice.total.toFixed(2)} ج.م`);
+    }
+  };
+
+  const handlePrint = () => {
+    toast.info('جاري الطباعة...');
+    window.print();
   };
 
   return (
@@ -77,22 +83,36 @@ export default function CashierPage() {
           onCategoryChange={setActiveCategory}
         />
         <div className="flex-1 overflow-y-auto">
-          <ProductGrid products={filteredProducts} onAddToCart={addToCart} />
+          <ProductGrid 
+            products={filteredProducts} 
+            onProductClick={handleProductClick} 
+          />
         </div>
       </div>
 
       {/* Cart Section */}
       <div className="w-[400px] flex-shrink-0">
         <Cart
-          items={cartItems}
-          paymentMethod={paymentMethod}
-          onUpdateQuantity={updateQuantity}
-          onRemoveItem={removeItem}
-          onPaymentMethodChange={setPaymentMethod}
-          onNewInvoice={handleNewInvoice}
-          onComplete={handleComplete}
+          items={items}
+          subtotal={subtotal}
+          serviceFee={serviceFee}
+          tax={tax}
+          total={total}
+          onQuantityChange={handleQuantityChange}
+          onRemoveItem={handleRemoveItem}
+          onClearCart={handleClearCart}
+          onCompleteSale={handleCompleteSale}
+          onPrint={handlePrint}
         />
       </div>
     </div>
+  );
+}
+
+export default function CashierPage() {
+  return (
+    <CartProvider>
+      <CashierContent />
+    </CartProvider>
   );
 }

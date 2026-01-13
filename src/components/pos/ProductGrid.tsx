@@ -3,10 +3,10 @@ import { ProductCard } from './ProductCard';
 
 interface ProductGridProps {
   products: Product[];
-  onAddToCart: (product: Product) => void;
+  onProductClick: (product: Product) => void;
 }
 
-export function ProductGrid({ products, onAddToCart }: ProductGridProps) {
+export function ProductGrid({ products, onProductClick }: ProductGridProps) {
   if (products.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
@@ -21,7 +21,7 @@ export function ProductGrid({ products, onAddToCart }: ProductGridProps) {
         <ProductCard
           key={product.id}
           product={product}
-          onAdd={onAddToCart}
+          onClick={() => onProductClick(product)}
         />
       ))}
     </div>
