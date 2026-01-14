@@ -21,7 +21,7 @@ export function PrintableInvoice({ invoice }: PrintableInvoiceProps) {
     <div className="print-invoice p-8 max-w-md mx-auto bg-white text-black">
       {/* Header */}
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold">Cafe POS</h1>
+        <h1 className="text-2xl font-bold">Cashier POS</h1>
         <p className="text-sm text-gray-600">فاتورة ضريبية</p>
       </div>
 

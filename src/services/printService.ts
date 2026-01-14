@@ -123,7 +123,7 @@ class PrintService {
       </head>
       <body>
         <div class="header">
-          <h1>Cafe POS</h1>
+          <h1>Cashier POS</h1>
           <p>فاتورة ضريبية</p>
         </div>
         

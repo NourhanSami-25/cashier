@@ -28,7 +28,7 @@ export function Header() {
               <Coffee className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">Cafe POS</h1>
+              <h1 className="text-xl font-bold text-foreground">Cashier POS</h1>
               <p className="text-sm text-muted-foreground">نظام الكاشير</p>
             </div>
           </div>

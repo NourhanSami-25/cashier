@@ -92,7 +92,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const invoice = invoiceService.createInvoice(items, paymentMethod);
     invoiceService.saveInvoice(invoice);
-    setItems([]);
+    // Don't clear items - keep the invoice visible
     return invoice;
   }, [items]);
 

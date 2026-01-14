@@ -32,21 +32,32 @@ export function Cart({
   onPrint,
 }: CartProps) {
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('cash');
+  const [isSaleCompleted, setIsSaleCompleted] = React.useState(false);
+
+  // Reset sale completed state when items change
+  React.useEffect(() => {
+    if (items.length === 0) {
+      setIsSaleCompleted(false);
+    }
+  }, [items.length]);
 
   const handleCompleteSale = () => {
-    if (items.length === 0) {
+    if (items.length === 0 || isSaleCompleted) {
       return;
     }
     onCompleteSale(paymentMethod);
+    setIsSaleCompleted(true);
   };
 
   const handleNewInvoice = () => {
     if (items.length > 0) {
       if (window.confirm('هل تريد مسح الفاتورة الحالية؟')) {
         onClearCart();
+        setIsSaleCompleted(false);
       }
     } else {
       onClearCart();
+      setIsSaleCompleted(false);
     }
   };
 
@@ -144,10 +155,16 @@ export function Cart({
           <div className="space-y-2">
             <button
               onClick={handleCompleteSale}
-              className="w-full py-4 gradient-accent text-accent-foreground rounded-xl font-bold text-lg shadow-soft hover:shadow-glow transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98]"
+              disabled={isSaleCompleted}
+              className={cn(
+                "w-full py-4 rounded-xl font-bold text-lg shadow-soft transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98]",
+                isSaleCompleted
+                  ? "bg-green-600 text-white cursor-not-allowed"
+                  : "gradient-accent text-accent-foreground hover:shadow-glow"
+              )}
             >
               <CheckCircle className="w-6 h-6" />
-              <span>إتمام البيع</span>
+              <span>{isSaleCompleted ? 'تم البيع' : 'إتمام البيع'}</span>
             </button>
             <div className="grid grid-cols-2 gap-2">
               <button

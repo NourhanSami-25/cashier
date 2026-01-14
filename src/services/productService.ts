@@ -132,12 +132,26 @@ class ProductService {
   }
 
   /**
-   * Delete a category
+   * Delete a category and all its associated products
    */
   deleteCategory(id: string): void {
+    // Delete all products in this category
+    const products = this.getAllProducts();
+    const filteredProducts = products.filter(p => p.categoryId !== id);
+    storageService.save(STORAGE_KEYS.PRODUCTS, filteredProducts);
+
+    // Delete the category
     const categories = this.getAllCategories();
-    const filtered = categories.filter(c => c.id !== id);
-    storageService.save(STORAGE_KEYS.CATEGORIES, filtered);
+    const filteredCategories = categories.filter(c => c.id !== id);
+    storageService.save(STORAGE_KEYS.CATEGORIES, filteredCategories);
+  }
+
+  /**
+   * Get count of products in a category
+   */
+  getProductCountByCategory(categoryId: string): number {
+    const products = this.getAllProducts();
+    return products.filter(p => p.categoryId === categoryId).length;
   }
 
   /**
