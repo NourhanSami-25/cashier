@@ -5,13 +5,15 @@ import { CategoryManager } from '@/components/products/CategoryManager';
 import { productService } from '@/services/productService';
 import { Product, Category } from '@/types/pos';
 import { toast } from 'sonner';
-import { Plus, Package } from 'lucide-react';
+import { Plus, Package, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -72,6 +74,17 @@ export default function ProductsPage() {
     setShowForm(false);
   };
 
+  // Filter products based on search query
+  const filteredProducts = products.filter(product => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase().trim();
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.description?.toLowerCase().includes(query) ||
+      categories.find(c => c.id === product.categoryId)?.name.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -94,6 +107,20 @@ export default function ProductsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Products Section */}
         <div className="lg:col-span-2 space-y-4">
+          {/* Search Bar */}
+          {!showForm && (
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="ابحث عن منتج بالاسم أو الوصف أو التصنيف..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pr-10 h-12 text-lg"
+              />
+            </div>
+          )}
+          
           {showForm && (
             <ProductForm
               product={editingProduct}
@@ -103,7 +130,7 @@ export default function ProductsPage() {
             />
           )}
           <ProductTable
-            products={products}
+            products={filteredProducts}
             categories={categories}
             onEdit={handleEditProduct}
             onDelete={handleDeleteProduct}

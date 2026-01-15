@@ -6,11 +6,14 @@ import { CartProvider, useCart } from '@/context/CartContext';
 import { productService } from '@/services/productService';
 import { Product, Category } from '@/types/pos';
 import { toast } from 'sonner';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 function CashierContent() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
   const {
     items,
@@ -33,9 +36,21 @@ function CashierContent() {
   }, []);
 
   const filteredProducts = useMemo(() => {
-    if (activeCategory === null) return products;
-    return productService.getProductsByCategory(activeCategory);
-  }, [activeCategory, products]);
+    let filtered = activeCategory === null 
+      ? products 
+      : productService.getProductsByCategory(activeCategory);
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(product => 
+        product.name.toLowerCase().includes(query) ||
+        product.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [activeCategory, products, searchQuery]);
 
   const handleProductClick = (product: Product) => {
     addItem(product);
@@ -264,6 +279,18 @@ function CashierContent() {
     <div className="flex h-[calc(100vh-88px)] gap-4 p-4">
       {/* Products Section */}
       <div className="flex-1 flex flex-col gap-4 min-w-0">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+          <Input
+            type="text"
+            placeholder="ابحث عن منتج..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-10 h-12 text-lg"
+          />
+        </div>
+        
         <CategoryTabs
           categories={categories}
           activeCategory={activeCategory}
